@@ -401,6 +401,23 @@ export function DecisionMap() {
             <span><i className="legend-poi" /> 1.5km 配套</span>
           </div>
           <div className="map-label">上海 · 全市场广度扫描</div>
+          <div className="map-insight">
+            <span>1.5KM 生活圈画像</span>
+            <div>
+              <strong>{poiStatus === "ready" ? pois.length : "—"}</strong>
+              <small>当前可读取配套</small>
+            </div>
+            <div>
+              <strong>—</strong>
+              <small>符合条件在售房源</small>
+            </div>
+            <p>
+              {poiStatus === "loading" && "正在读取公开点位…"}
+              {poiStatus === "error" && "公开点位服务异常"}
+              {poiStatus === "ready" && pois.length === 0 && "当前数据源覆盖不足，等待接入高德"}
+              {poiStatus === "ready" && pois.length > 0 && "公开点位仅用于初筛；房源数据尚未接入"}
+            </p>
+          </div>
         </div>
 
         <aside className="detail-panel">
