@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Circle as LeafletCircle, Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
+import type { Circle as LeafletCircle, Layer as LeafletLayer, Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 
 type Circle = {
   id: string;
@@ -84,8 +84,10 @@ export function DecisionMap() {
   const markerInstances = useRef<LeafletMarker[]>([]);
   const poiMarkerInstances = useRef<LeafletMarker[]>([]);
   const radiusLayer = useRef<LeafletCircle | null>(null);
+  const districtLayers = useRef<LeafletLayer[]>([]);
   const poiCache = useRef<Record<string, Poi[]>>({});
   const [mapReady, setMapReady] = useState(false);
+  const [focusSelection, setFocusSelection] = useState(false);
   const [selectedId, setSelectedId] = useState("south-station");
   const [district, setDistrict] = useState("全部区域");
   const [query, setQuery] = useState("");
@@ -169,6 +171,52 @@ export function DecisionMap() {
         attribution: '&copy; OpenStreetMap &copy; CARTO',
         maxZoom: 19,
       }).addTo(map);
+
+      const districtColors: Record<string, string> = {
+        黄浦区: "#d88955", 徐汇区: "#bf6f78", 长宁区: "#9f78b9", 静安区: "#8977bd",
+        普陀区: "#6f8ec2", 虹口区: "#4e9eb6", 杨浦区: "#4aa6a0", 闵行区: "#6aa46e",
+        宝山区: "#8ca45a", 嘉定区: "#b3a34c", 浦东新区: "#d08f45", 金山区: "#b77d55",
+        松江区: "#9b775f", 青浦区: "#738d7b", 奉贤区: "#6f8f91", 崇明区: "#668d73",
+      };
+      try {
+        const base = window.location.pathname.replace(/\/$/, "");
+        const response = await fetch(`${base}/shanghai-districts.geojson`);
+        const geojson = await response.json();
+        const holes: [number, number][][] = [];
+        for (const feature of geojson.features) {
+          const polygons = feature.geometry.type === "MultiPolygon" ? feature.geometry.coordinates : [feature.geometry.coordinates];
+          for (const polygon of polygons) {
+            holes.push(polygon[0].map(([lng, lat]: [number, number]) => [lat, lng]));
+          }
+        }
+        const world: [number, number][] = [[-85, -180], [-85, 180], [85, 180], [85, -180]];
+        const outsideMask = L.polygon([world, ...holes], {
+          stroke: false,
+          fillColor: "#67717e",
+          fillOpacity: 0.64,
+          fillRule: "evenodd",
+          interactive: false,
+        }).addTo(map);
+        const districtLayer = L.geoJSON(geojson, {
+          style: (feature) => ({
+            color: "rgba(222,232,241,.56)",
+            weight: 1.1,
+            fillColor: districtColors[feature?.properties?.name] || "#718096",
+            fillOpacity: 0.13,
+          }),
+          onEachFeature: (feature, layer) => {
+            layer.bindTooltip(feature.properties.name, {
+              permanent: true,
+              direction: "center",
+              className: "district-label",
+            });
+          },
+        }).addTo(map);
+        districtLayers.current = [outsideMask, districtLayer];
+        map.fitBounds(districtLayer.getBounds(), { padding: [14, 14] });
+      } catch {
+        // Keep the base map usable if the boundary layer cannot load.
+      }
       L.control.zoom({ position: "bottomright" }).addTo(map);
       mapInstance.current = map;
       setMapReady(true);
@@ -193,7 +241,7 @@ export function DecisionMap() {
         });
         const marker = L.marker(item.coords, { icon }).addTo(map);
         marker.bindTooltip(item.name, { direction: "top", offset: [0, -16], className: "map-tooltip" });
-        marker.on("click", () => setSelectedId(item.id));
+        marker.on("click", () => { setSelectedId(item.id); setFocusSelection(true); });
         return marker;
       });
     }
@@ -201,10 +249,10 @@ export function DecisionMap() {
   }, [filtered, selected.id, mapReady]);
 
   useEffect(() => {
-    if (mapInstance.current && selected) {
+    if (mapInstance.current && selected && focusSelection) {
       mapInstance.current.flyTo(selected.coords, 14, { duration: 0.65 });
     }
-  }, [selected, mapReady]);
+  }, [selected, mapReady, focusSelection]);
 
   useEffect(() => {
     async function drawResearchRadius() {
@@ -361,7 +409,7 @@ export function DecisionMap() {
             <div className="circle-list">
               {filtered.map((item) => (
                 <div key={item.id} className={`circle-row-wrap ${item.id === selected.id ? "selected" : ""}`}>
-                  <button className="circle-row" onClick={() => setSelectedId(item.id)}>
+                  <button className="circle-row" onClick={() => { setSelectedId(item.id); setFocusSelection(true); }}>
                     <span className={`status-disc status-${item.status.toLowerCase()}`}>{item.status}</span>
                     <span className="row-copy">
                       <strong>{item.name}</strong>
@@ -399,6 +447,7 @@ export function DecisionMap() {
             <span><i className="legend-d" /> D 当前未证实</span>
             <span><i className="legend-river" /> 沿江 / 近水</span>
             <span><i className="legend-poi" /> 1.5km 配套</span>
+            <span><i className="legend-district" /> 行政区底色</span>
           </div>
           <div className="map-label">上海 · 全市场广度扫描</div>
           <div className="map-insight">
