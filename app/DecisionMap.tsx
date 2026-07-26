@@ -363,7 +363,15 @@ export function DecisionMap() {
       const L = await import("leaflet");
       poiMarkerInstances.current.forEach((marker) => marker.remove());
       const symbol: Record<Poi["category"], string> = { 小区: "房", 教育: "学", 医疗: "医", 商业: "购", 公园: "园", 交通: "行", 餐饮: "食" };
-      const displayedPois = pois.filter((item) => item.category !== "小区" || !hiddenCommunityIds.includes(item.id));
+      const visibleCommunityMarkers = pois
+        .filter((item) => item.category === "小区" && !hiddenCommunityIds.includes(item.id))
+        .sort((a, b) => {
+          const distanceA = (a.coords[0] - selected.coords[0]) ** 2 + (a.coords[1] - selected.coords[1]) ** 2;
+          const distanceB = (b.coords[0] - selected.coords[0]) ** 2 + (b.coords[1] - selected.coords[1]) ** 2;
+          return distanceA - distanceB;
+        })
+        .slice(0, 35);
+      const displayedPois = [...visibleCommunityMarkers, ...pois.filter((item) => item.category !== "小区")];
       poiMarkerInstances.current = displayedPois.map((item) => {
         const icon = L.divIcon({
           className: item.category === "小区" ? "community-marker-wrap" : "poi-marker-wrap",
@@ -381,7 +389,7 @@ export function DecisionMap() {
       });
     }
     refreshPoiMarkers();
-  }, [pois, mapReady, hiddenCommunityIds]);
+  }, [pois, mapReady, hiddenCommunityIds, selected]);
 
   return (
     <main className="app-shell">
@@ -552,7 +560,7 @@ export function DecisionMap() {
                   {showHiddenCommunities ? "当前生活圈没有已屏蔽小区" : "公开地图未识别到小区，等待接入高德与房源数据"}
                 </div>
               )}
-              {visibleCommunities.map((item) => (
+              {visibleCommunities.slice(0, 60).map((item) => (
                 <article key={item.id} className="community-card">
                   <div>
                     <strong>{item.name}</strong>
