@@ -48,9 +48,18 @@ const circles: Circle[] = [
   { id:"caolu",name:"曹路生活圈",district:"浦东新区",station:"民雷路 / 曹路",lines:"9号线",status:"C",evidence:"证据不足",product:"1990–2010年代两房",price:"约160–233万样本",size:"64–78㎡",commute:"9号线长距离",riverside:false,coords:[31.269,121.681],facts:["总价面积余量明显","两代住宅混合"],verify:["房屋性质","站距与通勤"],nearby:["金海文化艺术中心","曹路宝龙"]},
   { id:"jinyang",name:"金杨—金桥生活圈",district:"浦东新区",station:"金桥路 / 博兴路",lines:"6/9号线",status:"C",evidence:"证据不足",product:"1990年代老公房",price:"约220–250万样本",size:"72–75㎡",commute:"待实测",riverside:true,coords:[31.257,121.588],facts:["预算内空间样本","成熟生活配套"],verify:["实际滨江可达性","楼层与噪声"],nearby:["金桥公园","碧云体育公园"]},
   { id:"zhaoxiang",name:"赵巷生活圈",district:"青浦区",station:"赵巷 / 汇金路附近",lines:"17号线",status:"C",evidence:"证据不足",product:"2010年代电梯两房",price:"约110–155万样本",size:"69–76㎡",commute:"待实测",riverside:false,coords:[31.159,121.193],facts:["价格余量很大","电梯住宅"],verify:["小区到地铁真实距离","通勤与流动性"],nearby:["奥特莱斯","赵巷公园"]},
+  { id:"yangjing",name:"洋泾生活圈",district:"浦东新区",station:"北洋泾路 / 德平路",lines:"6/18号线",status:"D",evidence:"面积条件未证实",product:"老公房小两房",price:"约250万边界样本",size:"约43㎡边界样本",commute:"待实测",riverside:true,coords:[31.240,121.550],facts:["存在250万、约43㎡两房挂牌样本","成熟社区但主流两房明显高于预算"],verify:["60㎡以上预算内成交","从住宅区到滨江的实际路径"],nearby:["洋泾社区商业","浦东滨江"]},
+  { id:"tangqiao",name:"塘桥生活圈",district:"浦东新区",station:"塘桥 / 蓝村路",lines:"4/6号线",status:"C",evidence:"紧凑两房边界",product:"1980–1990年代老公房",price:"约215万挂牌样本",size:"约50㎡",commute:"换乘9号线待实测",riverside:true,coords:[31.210,121.520],facts:["塘东小区出现约50㎡、215万两房挂牌样本","内环内、轨交与社区商业成熟"],verify:["60㎡以上房源是否可进入250万","噪声、楼层及真实滨江步行距离"],nearby:["塘桥公园","浦东滨江"]},
+  { id:"nanmatou",name:"南码头—临沂生活圈",district:"浦东新区",station:"临沂新村 / 高科西路",lines:"6/7号线",status:"C",evidence:"紧凑两房可见",product:"1980–1990年代老公房",price:"约214–240万挂牌样本",size:"约49–50㎡",commute:"换乘9号线待实测",riverside:true,coords:[31.190,121.507],facts:["临沂七村、港机新村出现预算内紧凑两房样本","临沂路—浦三路社区级商业成熟"],verify:["60–70㎡预算内稳定供给","每个小区到连续滨江的真实步行时间"],nearby:["临沂路生活街区","南浦大桥滨江"]},
+  { id:"zhoujiadu",name:"周家渡—云台生活圈",district:"浦东新区",station:"云台路 / 成山路",lines:"7/8/13号线",status:"D",evidence:"合格样本未证实",product:"老公房与动迁房两房",price:"250万边界待核",size:"待补证",commute:"换乘9号线待实测",riverside:true,coords:[31.181,121.502],facts:["生活配套与轨交密度较成熟","处在世博滨江住宅腹地"],verify:["普通住宅两房真实挂牌与成交","住宅到滨江是否被道路或大型地块阻隔"],nearby:["云台路商业","世博文化公园"]},
+  { id:"shanggang",name:"上钢新村—昌里生活圈",district:"浦东新区",station:"长清路 / 耀华路",lines:"7/8/13号线",status:"C",evidence:"紧凑两房可见",product:"老公房小两房",price:"约208–248万挂牌样本",size:"约51–55㎡",commute:"换乘9号线待实测",riverside:true,coords:[31.177,121.491],facts:["上钢新村及上钢二村存在预算内两房样本","昌里路生活配套成熟、靠近世博滨江"],verify:["60㎡以上供给与成交","一楼潮湿、噪声和小区环境"],nearby:["昌里路生活街区","世博文化公园"]},
+  { id:"yangsi",name:"杨思—德州生活圈",district:"浦东新区",station:"杨思 / 成山路",lines:"8/13号线",status:"C",evidence:"预算内两房样本",product:"1990年代老公房",price:"约220–238万挂牌样本",size:"约61㎡",commute:"换乘9号线待实测",riverside:true,coords:[31.166,121.500],facts:["杨思路502弄出现约61㎡、220–238万两房样本","面积首次落入Joshua的60–70㎡目标区间"],verify:["挂牌真实性与近12月成交","到滨江、地铁和漕河泾的门到门时间"],nearby:["杨思路生活街区","前滩休闲公园外围"]},
+  { id:"sanlin",name:"凌兆—三林生活圈",district:"浦东新区",station:"凌兆新村 / 三林",lines:"8/11号线",status:"C",evidence:"预算内两房样本",product:"1990年代动迁房与老公房",price:"约175–212万挂牌样本",size:"约52–62㎡",commute:"换乘9号线待实测",riverside:true,coords:[31.142,121.497],facts:["凌兆二村与凌兆十五村出现预算内两房样本","总价余量优于北侧沿江板块"],verify:["60㎡以上稳定供给","老人适配楼层、小区环境与滨江实际可达性"],nearby:["凌兆新村社区商业","三林滨江"]},
+  { id:"expo",name:"世博—后滩功能区",district:"浦东新区",station:"中华艺术宫 / 后滩",lines:"7/8/13号线",status:"D",evidence:"不是独立刚需住宅圈",product:"次新商品房与少量老住宅",price:"已见两房样本约282–288万",size:"约77–78㎡样本",commute:"换乘9号线待实测",riverside:true,coords:[31.185,121.476],facts:["滨江公共空间质量高","当前检索到的标准两房样本超过250万"],verify:["是否存在普通住宅预算内异常样本","把周边居住腹地与景观功能区分开"],nearby:["世博文化公园","后滩公园"]},
+  { id:"qiantan-edge",name:"前滩外围（研究标签）",district:"浦东新区",station:"东方体育中心 / 灵岩南路",lines:"6/8/11号线",status:"D",evidence:"边界概念待拆分",product:"跨杨思、凌兆等不同住宅圈",price:"不可直接比较",size:"不可直接比较",commute:"待按具体小区实测",riverside:true,coords:[31.153,121.478],facts:["“前滩外围”是营销与区位标签，不是同质生活圈","预算内样本主要可能落在杨思、凌兆等既有社区"],verify:["具体小区归属与产权","避免为前滩标签支付溢价"],nearby:["前滩太古里","前滩休闲公园"]},
 ];
 
-const upcoming = ["洋泾","塘桥","南码头","世博 / 后滩","周家渡","上钢新村","杨思","三林","前滩外围"];
+const upcoming = ["洋泾","塘桥","南码头—临沂","周家渡—云台","上钢—昌里","杨思—德州","凌兆—三林","世博 / 后滩","前滩外围"];
 const districts = ["全部区域", ...Array.from(new Set(circles.map((item) => item.district)))];
 
 function statusText(status: Circle["status"]) {
@@ -134,7 +143,7 @@ export function DecisionMap() {
         </div>
         <div className="header-note">
           <span className="live-dot" />
-          数据截至 2026.07.23
+          数据截至 2026.07.26
         </div>
       </header>
 
@@ -243,9 +252,9 @@ export function DecisionMap() {
 
       <section className="next-study">
         <div>
-          <p className="eyebrow">NEXT RESEARCH THEME</p>
+          <p className="eyebrow">SPECIAL RESEARCH · FIRST SCAN</p>
           <h2>浦东 · 黄浦江沿线生活圈专项</h2>
-          <p>下一轮将区分“真正步行可达滨江”与“营销意义上的滨江板块”。</p>
+          <p>首轮事实扫描已入库：板块临江 ≠ 住宅步行可达滨江；挂牌存在 ≠ 满足面积、产权与成交条件。</p>
         </div>
         <div className="route-list">
           {upcoming.map((item, index) => <span key={item}><b>{String(index + 1).padStart(2, "0")}</b>{item}</span>)}
