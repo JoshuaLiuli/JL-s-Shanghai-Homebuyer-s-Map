@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
+import type { Circle as LeafletCircle, Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 
 type Circle = {
   id: string;
@@ -25,7 +25,7 @@ type Circle = {
 type Poi = {
   id: string;
   name: string;
-  category: "学校" | "医院" | "超市" | "公园" | "地铁";
+  category: "教育" | "医疗" | "商业" | "公园" | "交通" | "餐饮";
   coords: [number, number];
 };
 
@@ -77,7 +77,9 @@ export function DecisionMap() {
   const mapInstance = useRef<LeafletMap | null>(null);
   const markerInstances = useRef<LeafletMarker[]>([]);
   const poiMarkerInstances = useRef<LeafletMarker[]>([]);
+  const radiusLayer = useRef<LeafletCircle | null>(null);
   const poiCache = useRef<Record<string, Poi[]>>({});
+  const [mapReady, setMapReady] = useState(false);
   const [selectedId, setSelectedId] = useState("south-station");
   const [district, setDistrict] = useState("全部区域");
   const [query, setQuery] = useState("");
@@ -140,6 +142,7 @@ export function DecisionMap() {
       }).addTo(map);
       L.control.zoom({ position: "bottomright" }).addTo(map);
       mapInstance.current = map;
+      setMapReady(true);
     }
     init();
     return () => { mounted = false; };
@@ -166,13 +169,32 @@ export function DecisionMap() {
       });
     }
     refreshMarkers();
-  }, [filtered, selected.id]);
+  }, [filtered, selected.id, mapReady]);
 
   useEffect(() => {
     if (mapInstance.current && selected) {
       mapInstance.current.flyTo(selected.coords, 14, { duration: 0.65 });
     }
-  }, [selected]);
+  }, [selected, mapReady]);
+
+  useEffect(() => {
+    async function drawResearchRadius() {
+      const map = mapInstance.current;
+      if (!map) return;
+      const L = await import("leaflet");
+      radiusLayer.current?.remove();
+      radiusLayer.current = L.circle(selected.coords, {
+        radius: 1500,
+        color: "#6bc1c2",
+        weight: 1.5,
+        opacity: 0.9,
+        fillColor: "#6bc1c2",
+        fillOpacity: 0.07,
+        dashArray: "6 6",
+      }).addTo(map);
+    }
+    drawResearchRadius();
+  }, [selected, mapReady]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -186,10 +208,10 @@ export function DecisionMap() {
       setPoiStatus("loading");
       const [lat, lng] = selected.coords;
       const queryText = `[out:json][timeout:18];(
-        nwr(around:1500,${lat},${lng})[amenity~"school|kindergarten|hospital|clinic"];
-        nwr(around:1500,${lat},${lng})[shop="supermarket"];
-        nwr(around:1500,${lat},${lng})[leisure="park"];
-        nwr(around:1500,${lat},${lng})[railway="station"];
+        nwr(around:1500,${lat},${lng})[amenity~"school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|marketplace|restaurant|cafe|fast_food|food_court|bus_station"];
+        nwr(around:1500,${lat},${lng})[shop~"supermarket|convenience|department_store|mall|greengrocer"];
+        nwr(around:1500,${lat},${lng})[leisure~"park|playground|sports_centre|fitness_centre"];
+        nwr(around:1500,${lat},${lng})[railway~"station|subway_entrance"];
       );out center tags;`;
       try {
         const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(queryText)}`, { signal: controller.signal });
@@ -206,13 +228,14 @@ export function DecisionMap() {
           const name = element.tags?.["name:zh"] || element.tags?.name;
           if (!point || !name) return [];
           let category: Poi["category"] = "公园";
-          if (element.tags?.railway === "station") category = "地铁";
-          else if (element.tags?.shop === "supermarket") category = "超市";
-          else if (element.tags?.amenity === "hospital" || element.tags?.amenity === "clinic") category = "医院";
-          else if (element.tags?.amenity === "school" || element.tags?.amenity === "kindergarten") category = "学校";
+          if (element.tags?.railway || element.tags?.amenity === "bus_station") category = "交通";
+          else if (element.tags?.shop || element.tags?.amenity === "marketplace") category = "商业";
+          else if (/hospital|clinic|doctors|pharmacy/.test(element.tags?.amenity || "")) category = "医疗";
+          else if (/school|kindergarten|college|university/.test(element.tags?.amenity || "")) category = "教育";
+          else if (/restaurant|cafe|fast_food|food_court/.test(element.tags?.amenity || "")) category = "餐饮";
           return [{ id: `${element.id}-${category}`, name, category, coords: point as [number, number] }];
         });
-        const unique = Array.from(new Map(items.map((item) => [`${item.name}-${item.category}`, item])).values()).slice(0, 40);
+        const unique = Array.from(new Map(items.map((item) => [`${item.name}-${item.category}`, item])).values()).slice(0, 100);
         poiCache.current[selected.id] = unique;
         setPois(unique);
         setPoiStatus("ready");
@@ -233,7 +256,7 @@ export function DecisionMap() {
       if (!map) return;
       const L = await import("leaflet");
       poiMarkerInstances.current.forEach((marker) => marker.remove());
-      const symbol: Record<Poi["category"], string> = { 学校: "学", 医院: "医", 超市: "购", 公园: "园", 地铁: "铁" };
+      const symbol: Record<Poi["category"], string> = { 教育: "学", 医疗: "医", 商业: "购", 公园: "园", 交通: "行", 餐饮: "食" };
       poiMarkerInstances.current = pois.map((item) => {
         const icon = L.divIcon({
           className: "poi-marker-wrap",
@@ -247,7 +270,7 @@ export function DecisionMap() {
       });
     }
     refreshPoiMarkers();
-  }, [pois]);
+  }, [pois, mapReady]);
 
   return (
     <main className="app-shell">
@@ -373,9 +396,9 @@ export function DecisionMap() {
               {poiStatus === "loading" && <span>正在读取公开地图点位…</span>}
               {poiStatus === "error" && <span>点位服务暂时不可用</span>}
               {poiStatus === "ready" && pois.length === 0 && <span>暂无公开点位，需人工补证</span>}
-              {pois.slice(0, 10).map((item) => <span key={item.id}>＋ {item.category} · {item.name}</span>)}
+              {pois.slice(0, 18).map((item) => <span key={item.id}>＋ {item.category} · {item.name}</span>)}
             </div>
-            <p className="poi-note">点位来自 OpenStreetMap，适合初筛，不替代实地和高德地图核验。</p>
+            <p className="poi-note">地图显示1.5公里研究半径内最多100个公开点位；点位来自 OpenStreetMap，适合初筛，不替代实地和高德地图核验。</p>
           </section>
 
           <div className="judgement-box">
