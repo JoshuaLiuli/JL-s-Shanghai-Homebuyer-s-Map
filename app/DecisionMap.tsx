@@ -22,6 +22,13 @@ type Circle = {
   nearby: string[];
 };
 
+type Poi = {
+  id: string;
+  name: string;
+  category: "学校" | "医院" | "超市" | "公园" | "地铁";
+  coords: [number, number];
+};
+
 const circles: Circle[] = [
   { id:"pujiang",name:"浦江（浦江镇—江月路）",district:"闵行区",station:"浦江镇 / 江月路",lines:"8号线",status:"C",evidence:"证据不足",product:"2000年代后两房",price:"待补证",size:"70–85㎡",commute:"待实测",riverside:true,coords:[31.086,121.506],facts:["已有预算内挂牌样本","浦江南段临近黄浦江"],verify:["近12月可比成交","实际步行与通勤"],nearby:["浦江郊野公园","浦江城市生活广场"]},
   { id:"zhuanqiao",name:"颛桥（颛桥—银都路）",district:"闵行区",station:"颛桥 / 银都路",lines:"5号线",status:"C",evidence:"证据不足",product:"老公房与商品房两房",price:"待补证",size:"60–80㎡",commute:"待实测",riverside:false,coords:[31.064,121.401],facts:["成熟居住区","存在预算边界样本"],verify:["成交活跃度","噪声与老人楼层"],nearby:["颛桥万达","银都路商业"]},
@@ -70,19 +77,40 @@ export function DecisionMap() {
   const mapElement = useRef<HTMLDivElement | null>(null);
   const mapInstance = useRef<LeafletMap | null>(null);
   const markerInstances = useRef<LeafletMarker[]>([]);
+  const poiMarkerInstances = useRef<LeafletMarker[]>([]);
+  const poiCache = useRef<Record<string, Poi[]>>({});
   const [selectedId, setSelectedId] = useState("south-station");
   const [district, setDistrict] = useState("全部区域");
   const [query, setQuery] = useState("");
   const [riversideOnly, setRiversideOnly] = useState(false);
+  const [shortlistOnly, setShortlistOnly] = useState(false);
+  const [shortlistIds, setShortlistIds] = useState<string[]>([]);
+  const [pois, setPois] = useState<Poi[]>([]);
+  const [poiStatus, setPoiStatus] = useState<"loading" | "ready" | "error">("loading");
   const [showList, setShowList] = useState(true);
 
   const filtered = useMemo(() => circles.filter((item) => {
     const matchDistrict = district === "全部区域" || item.district === district;
     const matchQuery = `${item.name}${item.district}${item.station}`.toLowerCase().includes(query.toLowerCase());
-    return matchDistrict && matchQuery && (!riversideOnly || item.riverside);
-  }), [district, query, riversideOnly]);
+    return matchDistrict && matchQuery && (!riversideOnly || item.riverside) && (!shortlistOnly || shortlistIds.includes(item.id));
+  }), [district, query, riversideOnly, shortlistOnly, shortlistIds]);
 
   const selected = circles.find((item) => item.id === selectedId) ?? filtered[0] ?? circles[0];
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("joshua-home-shortlist");
+    if (saved) {
+      try { setShortlistIds(JSON.parse(saved)); } catch { /* ignore invalid old data */ }
+    }
+  }, []);
+
+  function toggleShortlist(id: string) {
+    setShortlistIds((current) => {
+      const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
+      window.localStorage.setItem("joshua-home-shortlist", JSON.stringify(next));
+      return next;
+    });
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -127,9 +155,84 @@ export function DecisionMap() {
 
   useEffect(() => {
     if (mapInstance.current && selected) {
-      mapInstance.current.flyTo(selected.coords, Math.max(mapInstance.current.getZoom(), 11), { duration: 0.55 });
+      mapInstance.current.flyTo(selected.coords, 14, { duration: 0.65 });
     }
   }, [selected]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadPois() {
+      const cached = poiCache.current[selected.id];
+      if (cached) {
+        setPois(cached);
+        setPoiStatus("ready");
+        return;
+      }
+      setPoiStatus("loading");
+      const [lat, lng] = selected.coords;
+      const queryText = `[out:json][timeout:18];(
+        nwr(around:1500,${lat},${lng})[amenity~"school|kindergarten|hospital|clinic"];
+        nwr(around:1500,${lat},${lng})[shop="supermarket"];
+        nwr(around:1500,${lat},${lng})[leisure="park"];
+        nwr(around:1500,${lat},${lng})[railway="station"];
+      );out center tags;`;
+      try {
+        const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(queryText)}`, { signal: controller.signal });
+        if (!response.ok) throw new Error("POI request failed");
+        const data = await response.json();
+        const items: Poi[] = data.elements.flatMap((element: {
+          id: number;
+          lat?: number;
+          lon?: number;
+          center?: { lat: number; lon: number };
+          tags?: Record<string, string>;
+        }) => {
+          const point = element.lat && element.lon ? [element.lat, element.lon] : element.center ? [element.center.lat, element.center.lon] : null;
+          const name = element.tags?.["name:zh"] || element.tags?.name;
+          if (!point || !name) return [];
+          let category: Poi["category"] = "公园";
+          if (element.tags?.railway === "station") category = "地铁";
+          else if (element.tags?.shop === "supermarket") category = "超市";
+          else if (element.tags?.amenity === "hospital" || element.tags?.amenity === "clinic") category = "医院";
+          else if (element.tags?.amenity === "school" || element.tags?.amenity === "kindergarten") category = "学校";
+          return [{ id: `${element.id}-${category}`, name, category, coords: point as [number, number] }];
+        });
+        const unique = Array.from(new Map(items.map((item) => [`${item.name}-${item.category}`, item])).values()).slice(0, 40);
+        poiCache.current[selected.id] = unique;
+        setPois(unique);
+        setPoiStatus("ready");
+      } catch {
+        if (!controller.signal.aborted) {
+          setPois([]);
+          setPoiStatus("error");
+        }
+      }
+    }
+    loadPois();
+    return () => controller.abort();
+  }, [selected]);
+
+  useEffect(() => {
+    async function refreshPoiMarkers() {
+      const map = mapInstance.current;
+      if (!map) return;
+      const L = await import("leaflet");
+      poiMarkerInstances.current.forEach((marker) => marker.remove());
+      const symbol: Record<Poi["category"], string> = { 学校: "学", 医院: "医", 超市: "购", 公园: "园", 地铁: "铁" };
+      poiMarkerInstances.current = pois.map((item) => {
+        const icon = L.divIcon({
+          className: "poi-marker-wrap",
+          html: `<span class="poi-marker poi-${item.category}">${symbol[item.category]}</span>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
+        });
+        const marker = L.marker(item.coords, { icon }).addTo(map);
+        marker.bindTooltip(`${item.category} · ${item.name}`, { direction: "top", offset: [0, -10], className: "map-tooltip" });
+        return marker;
+      });
+    }
+    refreshPoiMarkers();
+  }, [pois]);
 
   return (
     <main className="app-shell">
@@ -151,7 +254,7 @@ export function DecisionMap() {
         <div><strong>{circles.length}</strong><span>候选生活圈</span></div>
         <div><strong>{circles.filter((x) => x.status === "C").length}</strong><span>等待补证</span></div>
         <div><strong>{circles.filter((x) => x.riverside).length}</strong><span>沿江 / 近水样本</span></div>
-        <div className="metric-wide"><strong>0</strong><span>Joshua 已作判断</span><em>地图不替你决定</em></div>
+        <div className="metric-wide"><strong>{shortlistIds.length}</strong><span>Shortlist</span><em>仅代表进入复核，不代表决定购买</em></div>
       </section>
 
       <section className="workspace">
@@ -177,18 +280,31 @@ export function DecisionMap() {
               <button className={riversideOnly ? "filter-button active" : "filter-button"} onClick={() => setRiversideOnly(!riversideOnly)}>
                 ≋ 黄浦江沿线
               </button>
+              <button className={shortlistOnly ? "filter-button shortlist-filter active" : "filter-button shortlist-filter"} onClick={() => setShortlistOnly(!shortlistOnly)}>
+                ★ Shortlist {shortlistIds.length || ""}
+              </button>
             </div>
             <div className="result-count">显示 {filtered.length} / {circles.length} 个生活圈</div>
             <div className="circle-list">
               {filtered.map((item) => (
-                <button key={item.id} className={`circle-row ${item.id === selected.id ? "selected" : ""}`} onClick={() => setSelectedId(item.id)}>
-                  <span className={`status-disc status-${item.status.toLowerCase()}`}>{item.status}</span>
-                  <span className="row-copy">
-                    <strong>{item.name}</strong>
-                    <small>{item.district} · {item.station}</small>
-                  </span>
-                  {item.riverside && <span className="river-glyph">≈</span>}
-                </button>
+                <div key={item.id} className={`circle-row-wrap ${item.id === selected.id ? "selected" : ""}`}>
+                  <button className="circle-row" onClick={() => setSelectedId(item.id)}>
+                    <span className={`status-disc status-${item.status.toLowerCase()}`}>{item.status}</span>
+                    <span className="row-copy">
+                      <strong>{item.name}</strong>
+                      <small>{item.district} · {item.station}</small>
+                    </span>
+                    {item.riverside && <span className="river-glyph">≈</span>}
+                  </button>
+                  <button
+                    className={shortlistIds.includes(item.id) ? "shortlist-toggle active" : "shortlist-toggle"}
+                    onClick={() => toggleShortlist(item.id)}
+                    aria-label={shortlistIds.includes(item.id) ? `从Shortlist移除${item.name}` : `将${item.name}加入Shortlist`}
+                    title={shortlistIds.includes(item.id) ? "从 Shortlist 移除" : "加入 Shortlist"}
+                  >
+                    {shortlistIds.includes(item.id) ? "★" : "☆"}
+                  </button>
+                </div>
               ))}
               {filtered.length === 0 && <div className="empty-state">没有符合当前筛选的生活圈</div>}
             </div>
@@ -201,6 +317,7 @@ export function DecisionMap() {
             <span><i className="legend-c" /> C 证据不足</span>
             <span><i className="legend-d" /> D 当前未证实</span>
             <span><i className="legend-river" /> 沿江 / 近水</span>
+            <span><i className="legend-poi" /> 1.5km 配套</span>
           </div>
           <div className="map-label">上海 · 全市场广度扫描</div>
         </div>
@@ -236,10 +353,14 @@ export function DecisionMap() {
           </section>
 
           <section className="detail-section">
-            <div className="section-title"><span>03</span><h3>附近关注</h3></div>
+            <div className="section-title"><span>03</span><h3>1.5km 配套点位</h3></div>
             <div className="nearby-list">
-              {selected.nearby.map((item) => <span key={item}>＋ {item}</span>)}
+              {poiStatus === "loading" && <span>正在读取公开地图点位…</span>}
+              {poiStatus === "error" && <span>点位服务暂时不可用</span>}
+              {poiStatus === "ready" && pois.length === 0 && <span>暂无公开点位，需人工补证</span>}
+              {pois.slice(0, 10).map((item) => <span key={item.id}>＋ {item.category} · {item.name}</span>)}
             </div>
+            <p className="poi-note">点位来自 OpenStreetMap，适合初筛，不替代实地和高德地图核验。</p>
           </section>
 
           <div className="judgement-box">
