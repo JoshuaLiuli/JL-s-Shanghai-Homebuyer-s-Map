@@ -51,7 +51,7 @@ h1 { margin-bottom: 0; font-family: "Songti SC", "STSong", serif; font-size: cla
 
 .workspace { display: grid; grid-template-columns: minmax(250px, 315px) minmax(420px, 1fr) minmax(290px, 350px); min-height: 670px; height: calc(100vh - 190px); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,.32); }
 .research-panel, .detail-panel { min-width: 0; background: rgba(11,24,39,.97); }
-.research-panel { border-right: 1px solid var(--line); padding: 20px 16px 10px; transition: width .25s; }
+.research-panel { min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--line); padding: 20px 16px 10px; transition: width .25s; }
 .research-panel.is-collapsed { width: 62px; padding: 20px 10px; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
 .panel-heading h2 { margin: 0; font-family: "Songti SC", serif; font-size: 20px; font-weight: 500; }
@@ -65,9 +65,11 @@ h1 { margin-bottom: 0; font-family: "Songti SC", "STSong", serif; font-size: cla
 .shortlist-filter { grid-column: 1 / -1; }
 .shortlist-filter.active { border-color: rgba(232,117,47,.65); background: rgba(232,117,47,.12); color: var(--orange-soft); }
 .result-count { padding: 4px 2px 10px; color: #617185; font-size: 10px; letter-spacing: .06em; }
-.circle-list { height: calc(100% - 147px); overflow-y: auto; padding-right: 3px; }
-.circle-list::-webkit-scrollbar { width: 4px; }
-.circle-list::-webkit-scrollbar-thumb { background: #2b3b4e; border-radius: 4px; }
+.circle-list { min-height: 0; flex: 1 1 auto; overflow-y: scroll; overscroll-behavior: contain; scrollbar-color: #60758c #0b1726; scrollbar-width: auto; padding-right: 6px; }
+.circle-list::-webkit-scrollbar { width: 10px; }
+.circle-list::-webkit-scrollbar-track { background: #0b1726; border-radius: 8px; }
+.circle-list::-webkit-scrollbar-thumb { min-height: 44px; background: #60758c; border: 2px solid #0b1726; border-radius: 8px; }
+.circle-list::-webkit-scrollbar-thumb:hover { background: #8195aa; }
 .circle-row-wrap { position: relative; display: flex; align-items: center; border-top: 1px solid rgba(184,204,224,.07); border-radius: 9px; }
 .circle-row { min-width: 0; width: 100%; display: flex; align-items: center; gap: 10px; padding: 11px 36px 11px 9px; text-align: left; background: transparent; border: 0; cursor: pointer; border-radius: 9px; }
 .circle-row:hover { background: rgba(255,255,255,.035); }
@@ -99,11 +101,12 @@ h1 { margin-bottom: 0; font-family: "Songti SC", "STSong", serif; font-size: cla
 .circle-marker.is-active { width: 34px; height: 34px; transform: translate(-3px,-3px); border-color: #fff1dc; background: var(--orange); color: white; box-shadow: 0 0 0 7px rgba(232,117,47,.18), 0 5px 20px rgba(0,0,0,.6); }
 .poi-marker-wrap { background: transparent; border: 0; }
 .poi-marker { width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.8); border-radius: 7px; background: #14273b; color: white; box-shadow: 0 3px 10px rgba(0,0,0,.48); font: 700 9px ui-monospace, monospace; }
-.poi-学校 { background: #355f9c; }
-.poi-医院 { background: #9a493f; }
-.poi-超市 { background: #8a6930; }
+.poi-教育 { background: #355f9c; }
+.poi-医疗 { background: #9a493f; }
+.poi-商业 { background: #8a6930; }
 .poi-公园 { background: #34705a; }
-.poi-地铁 { background: #68488c; }
+.poi-交通 { background: #68488c; }
+.poi-餐饮 { background: #9b5d36; }
 .map-tooltip { background: #101e2e !important; border: 1px solid rgba(255,255,255,.16) !important; color: var(--paper) !important; box-shadow: 0 8px 24px rgba(0,0,0,.38) !important; }
 .map-tooltip::before { border-top-color: #101e2e !important; }
 .map-legend { position: absolute; z-index: 500; left: 16px; bottom: 18px; display: flex; flex-wrap: wrap; gap: 10px 15px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 9px; background: rgba(7,17,31,.88); backdrop-filter: blur(10px); color: #aab7c5; font-size: 9px; }
