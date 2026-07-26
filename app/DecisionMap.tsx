@@ -66,7 +66,6 @@ const circles: Circle[] = [
   { id:"qiantan-edge",name:"前滩外围（研究标签）",district:"浦东新区",station:"东方体育中心 / 灵岩南路",lines:"6/8/11号线",status:"D",evidence:"边界概念待拆分",product:"跨杨思、凌兆等不同住宅圈",price:"不可直接比较",size:"不可直接比较",commute:"待按具体小区实测",riverside:true,coords:[31.153,121.478],facts:["“前滩外围”是营销与区位标签，不是同质生活圈","预算内样本主要可能落在杨思、凌兆等既有社区"],verify:["具体小区归属与产权","避免为前滩标签支付溢价"],nearby:["前滩太古里","前滩休闲公园"]},
 ];
 
-const upcoming = ["洋泾","塘桥","南码头—临沂","周家渡—云台","上钢—昌里","杨思—德州","凌兆—三林","世博 / 后滩","前滩外围"];
 const districts = ["全部区域", ...Array.from(new Set(circles.map((item) => item.district)))];
 
 function statusText(status: Circle["status"]) {
@@ -96,6 +95,22 @@ export function DecisionMap() {
   }), [district, query, riversideOnly, shortlistOnly, shortlistIds]);
 
   const selected = circles.find((item) => item.id === selectedId) ?? filtered[0] ?? circles[0];
+  const comparedCircles = useMemo(() => {
+    const shortlisted = circles.filter((item) => shortlistIds.includes(item.id));
+    return [selected, ...shortlisted.filter((item) => item.id !== selected.id)];
+  }, [selected, shortlistIds]);
+
+  const comparisonRows = [
+    { label: "01 总价可达性", value: (item: Circle) => item.price },
+    { label: "02 户型与面积", value: (item: Circle) => `${item.product} · ${item.size}` },
+    { label: "03 供给证据", value: (item: Circle) => `${item.evidence} · ${item.facts[0]}` },
+    { label: "04 通勤可达性", value: (item: Circle) => `${item.lines} · ${item.commute}` },
+    { label: "05 生活便利度", value: (item: Circle) => item.nearby.join(" / ") },
+    { label: "06 父母长期居住", value: (item: Circle) => item.verify.some((text) => /楼层|电梯|老人|潮湿/.test(text)) ? item.verify.filter((text) => /楼层|电梯|老人|潮湿/.test(text)).join(" / ") : "老人适配待实地核验" },
+    { label: "07 环境与噪声", value: (item: Circle) => item.verify.some((text) => /噪声|环境|步行|滨江/.test(text)) ? item.verify.filter((text) => /噪声|环境|步行|滨江/.test(text)).join(" / ") : "安静度与小区环境待核验" },
+    { label: "08 滨江与休闲", value: (item: Circle) => item.riverside ? `沿江关注 · ${item.nearby.join(" / ")}` : `非沿江样本 · ${item.nearby.join(" / ")}` },
+    { label: "09 流动性与风险", value: (item: Circle) => item.verify.join(" / ") },
+  ];
 
   useEffect(() => {
     const saved = window.localStorage.getItem("joshua-home-shortlist");
@@ -371,14 +386,40 @@ export function DecisionMap() {
         </aside>
       </section>
 
-      <section className="next-study">
-        <div>
-          <p className="eyebrow">SPECIAL RESEARCH · FIRST SCAN</p>
-          <h2>浦东 · 黄浦江沿线生活圈专项</h2>
-          <p>首轮事实扫描已入库：板块临江 ≠ 住宅步行可达滨江；挂牌存在 ≠ 满足面积、产权与成交条件。</p>
+      <section className="comparison-section">
+        <div className="comparison-heading">
+          <div>
+            <p className="eyebrow">LIFE CIRCLE · 9-DIMENSION REVIEW</p>
+            <h2>生活圈九维对比</h2>
+          </div>
+          <p>
+            当前点选始终显示；Shortlist 中的生活圈自动加入横向比较。
+            <br />表内“待核验”不是负面判断，而是下一轮需要补充的证据。
+          </p>
         </div>
-        <div className="route-list">
-          {upcoming.map((item, index) => <span key={item}><b>{String(index + 1).padStart(2, "0")}</b>{item}</span>)}
+        <div className="comparison-scroll">
+          <table className="comparison-table">
+            <thead>
+              <tr>
+                <th>判断维度</th>
+                {comparedCircles.map((item) => (
+                  <th key={item.id} className={item.id === selected.id ? "is-selected" : ""}>
+                    <span>{item.id === selected.id ? "当前点选" : "Shortlist"}</span>
+                    <strong>{item.name}</strong>
+                    <small>{item.district} · {item.station}</small>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {comparisonRows.map((row) => (
+                <tr key={row.label}>
+                  <th>{row.label}</th>
+                  {comparedCircles.map((item) => <td key={item.id}>{row.value(item)}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
