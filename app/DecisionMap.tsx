@@ -26,8 +26,13 @@ type Circle = {
 type Poi = {
   id: string;
   name: string;
-  category: "教育" | "医疗" | "商业" | "公园" | "交通" | "餐饮";
+  category: "小区" | "教育" | "医疗" | "商业" | "公园" | "交通" | "餐饮";
   coords: [number, number];
+  avgPrice?: number;
+  listingCount?: number;
+  matchedListingCount?: number;
+  dataDate?: string;
+  source?: string;
 };
 
 const circles: Circle[] = [
@@ -98,6 +103,8 @@ export function DecisionMap() {
   const [showArchived, setShowArchived] = useState(false);
   const [pois, setPois] = useState<Poi[]>([]);
   const [poiStatus, setPoiStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [hiddenCommunityIds, setHiddenCommunityIds] = useState<string[]>([]);
+  const [showHiddenCommunities, setShowHiddenCommunities] = useState(false);
   const [showList, setShowList] = useState(true);
 
   const filtered = useMemo(() => circles.filter((item) => {
@@ -124,6 +131,11 @@ export function DecisionMap() {
     { label: "08 滨江与休闲", value: (item: Circle) => item.riverside ? `沿江关注 · ${item.nearby.join(" / ")}` : `非沿江样本 · ${item.nearby.join(" / ")}` },
     { label: "09 流动性与风险", value: (item: Circle) => item.verify.join(" / ") },
   ];
+  const communities = useMemo(() => pois.filter((item) => item.category === "小区"), [pois]);
+  const visibleCommunities = useMemo(
+    () => communities.filter((item) => showHiddenCommunities ? hiddenCommunityIds.includes(item.id) : !hiddenCommunityIds.includes(item.id)),
+    [communities, hiddenCommunityIds, showHiddenCommunities],
+  );
 
   useEffect(() => {
     const saved = window.localStorage.getItem("joshua-home-shortlist");
@@ -133,6 +145,10 @@ export function DecisionMap() {
     const savedArchive = window.localStorage.getItem("joshua-home-archive");
     if (savedArchive) {
       try { setArchivedIds(JSON.parse(savedArchive)); } catch { /* ignore invalid old data */ }
+    }
+    const savedCommunityArchive = window.localStorage.getItem("joshua-community-archive");
+    if (savedCommunityArchive) {
+      try { setHiddenCommunityIds(JSON.parse(savedCommunityArchive)); } catch { /* ignore invalid old data */ }
     }
   }, []);
 
@@ -156,6 +172,14 @@ export function DecisionMap() {
           return nextShortlist;
         });
       }
+      return next;
+    });
+  }
+
+  function toggleCommunityArchive(id: string) {
+    setHiddenCommunityIds((current) => {
+      const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
+      window.localStorage.setItem("joshua-community-archive", JSON.stringify(next));
       return next;
     });
   }
@@ -285,6 +309,8 @@ export function DecisionMap() {
       setPoiStatus("loading");
       const [lat, lng] = selected.coords;
       const queryText = `[out:json][timeout:18];(
+        nwr(around:1500,${lat},${lng})[place~"neighbourhood|quarter"][name];
+        nwr(around:1500,${lat},${lng})[landuse="residential"][name];
         nwr(around:1500,${lat},${lng})[amenity~"school|kindergarten|college|university|hospital|clinic|doctors|pharmacy|marketplace|restaurant|cafe|fast_food|food_court|bus_station"];
         nwr(around:1500,${lat},${lng})[shop~"supermarket|convenience|department_store|mall|greengrocer"];
         nwr(around:1500,${lat},${lng})[leisure~"park|playground|sports_centre|fitness_centre"];
@@ -305,14 +331,17 @@ export function DecisionMap() {
           const name = element.tags?.["name:zh"] || element.tags?.name;
           if (!point || !name) return [];
           let category: Poi["category"] = "公园";
-          if (element.tags?.railway || element.tags?.amenity === "bus_station") category = "交通";
+          if (element.tags?.place || element.tags?.landuse === "residential") category = "小区";
+          else if (element.tags?.railway || element.tags?.amenity === "bus_station") category = "交通";
           else if (element.tags?.shop || element.tags?.amenity === "marketplace") category = "商业";
           else if (/hospital|clinic|doctors|pharmacy/.test(element.tags?.amenity || "")) category = "医疗";
           else if (/school|kindergarten|college|university/.test(element.tags?.amenity || "")) category = "教育";
           else if (/restaurant|cafe|fast_food|food_court/.test(element.tags?.amenity || "")) category = "餐饮";
           return [{ id: `${element.id}-${category}`, name, category, coords: point as [number, number] }];
         });
-        const unique = Array.from(new Map(items.map((item) => [`${item.name}-${item.category}`, item])).values()).slice(0, 100);
+        const unique = Array.from(new Map(items.map((item) => [`${item.name}-${item.category}`, item])).values())
+          .sort((a, b) => Number(b.category === "小区") - Number(a.category === "小区"))
+          .slice(0, 160);
         poiCache.current[selected.id] = unique;
         setPois(unique);
         setPoiStatus("ready");
@@ -333,21 +362,26 @@ export function DecisionMap() {
       if (!map) return;
       const L = await import("leaflet");
       poiMarkerInstances.current.forEach((marker) => marker.remove());
-      const symbol: Record<Poi["category"], string> = { 教育: "学", 医疗: "医", 商业: "购", 公园: "园", 交通: "行", 餐饮: "食" };
-      poiMarkerInstances.current = pois.map((item) => {
+      const symbol: Record<Poi["category"], string> = { 小区: "房", 教育: "学", 医疗: "医", 商业: "购", 公园: "园", 交通: "行", 餐饮: "食" };
+      const displayedPois = pois.filter((item) => item.category !== "小区" || !hiddenCommunityIds.includes(item.id));
+      poiMarkerInstances.current = displayedPois.map((item) => {
         const icon = L.divIcon({
-          className: "poi-marker-wrap",
-          html: `<span class="poi-marker poi-${item.category}">${symbol[item.category]}</span>`,
-          iconSize: [22, 22],
-          iconAnchor: [11, 11],
+          className: item.category === "小区" ? "community-marker-wrap" : "poi-marker-wrap",
+          html: item.category === "小区"
+            ? `<span class="community-marker"><b>${symbol[item.category]}</b>${item.name}</span>`
+            : `<span class="poi-marker poi-${item.category}">${symbol[item.category]}</span>`,
+          iconSize: item.category === "小区" ? [120, 24] : [22, 22],
+          iconAnchor: item.category === "小区" ? [12, 12] : [11, 11],
         });
         const marker = L.marker(item.coords, { icon }).addTo(map);
-        marker.bindTooltip(`${item.category} · ${item.name}`, { direction: "top", offset: [0, -10], className: "map-tooltip" });
+        if (item.category !== "小区") {
+          marker.bindTooltip(`${item.category} · ${item.name}`, { direction: "top", offset: [0, -10], className: "map-tooltip" });
+        }
         return marker;
       });
     }
     refreshPoiMarkers();
-  }, [pois, mapReady]);
+  }, [pois, mapReady, hiddenCommunityIds]);
 
   return (
     <main className="app-shell">
@@ -447,6 +481,7 @@ export function DecisionMap() {
             <span><i className="legend-d" /> D 当前未证实</span>
             <span><i className="legend-river" /> 沿江 / 近水</span>
             <span><i className="legend-poi" /> 1.5km 配套</span>
+            <span><i className="legend-community" /> 候选小区</span>
             <span><i className="legend-district" /> 行政区底色</span>
           </div>
           <div className="map-label">上海 · 全市场广度扫描</div>
@@ -455,6 +490,10 @@ export function DecisionMap() {
             <div>
               <strong>{poiStatus === "ready" ? pois.length : "—"}</strong>
               <small>当前可读取配套</small>
+            </div>
+            <div>
+              <strong>{communities.length || "—"}</strong>
+              <small>当前可识别小区</small>
             </div>
             <div>
               <strong>—</strong>
@@ -500,7 +539,44 @@ export function DecisionMap() {
           </section>
 
           <section className="detail-section">
-            <div className="section-title"><span>03</span><h3>1.5km 配套点位</h3></div>
+            <div className="section-title community-title">
+              <span>03</span><h3>候选小区层</h3>
+              <button onClick={() => setShowHiddenCommunities(!showHiddenCommunities)}>
+                {showHiddenCommunities ? "返回候选" : `已屏蔽 ${hiddenCommunityIds.length || ""}`}
+              </button>
+            </div>
+            <div className="community-list">
+              {poiStatus === "loading" && <div className="community-empty">正在识别小区…</div>}
+              {poiStatus === "ready" && visibleCommunities.length === 0 && (
+                <div className="community-empty">
+                  {showHiddenCommunities ? "当前生活圈没有已屏蔽小区" : "公开地图未识别到小区，等待接入高德与房源数据"}
+                </div>
+              )}
+              {visibleCommunities.map((item) => (
+                <article key={item.id} className="community-card">
+                  <div>
+                    <strong>{item.name}</strong>
+                    <small>{item.source || "公开地图名称"}</small>
+                  </div>
+                  <dl>
+                    <div><dt>参考均价</dt><dd>{item.avgPrice ? `${item.avgPrice.toLocaleString()}元/㎡` : "待接入"}</dd></div>
+                    <div><dt>在售</dt><dd>{item.listingCount ?? "—"}</dd></div>
+                    <div><dt>符合条件</dt><dd>{item.matchedListingCount ?? "—"}</dd></div>
+                  </dl>
+                  <button
+                    onClick={() => toggleCommunityArchive(item.id)}
+                    aria-label={hiddenCommunityIds.includes(item.id) ? `恢复小区${item.name}` : `屏蔽小区${item.name}`}
+                  >
+                    {hiddenCommunityIds.includes(item.id) ? "恢复" : "屏蔽"}
+                  </button>
+                </article>
+              ))}
+            </div>
+            <p className="poi-note">已预留小区均价、在售数、符合预算与户型条件的房源数、数据日期和来源字段。</p>
+          </section>
+
+          <section className="detail-section">
+            <div className="section-title"><span>04</span><h3>1.5km 配套点位</h3></div>
             <div className="nearby-list">
               {poiStatus === "loading" && <span>正在读取公开地图点位…</span>}
               {poiStatus === "error" && <span>点位服务暂时不可用</span>}
