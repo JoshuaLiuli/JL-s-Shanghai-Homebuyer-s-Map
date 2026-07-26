@@ -1,0 +1,261 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
+
+type Circle = {
+  id: string;
+  name: string;
+  district: string;
+  station: string;
+  lines: string;
+  status: "C" | "D";
+  evidence: string;
+  product: string;
+  price: string;
+  size: string;
+  commute: string;
+  riverside: boolean;
+  coords: [number, number];
+  facts: string[];
+  verify: string[];
+  nearby: string[];
+};
+
+const circles: Circle[] = [
+  { id:"pujiang",name:"浦江（浦江镇—江月路）",district:"闵行区",station:"浦江镇 / 江月路",lines:"8号线",status:"C",evidence:"证据不足",product:"2000年代后两房",price:"待补证",size:"70–85㎡",commute:"待实测",riverside:true,coords:[31.086,121.506],facts:["已有预算内挂牌样本","浦江南段临近黄浦江"],verify:["近12月可比成交","实际步行与通勤"],nearby:["浦江郊野公园","浦江城市生活广场"]},
+  { id:"zhuanqiao",name:"颛桥（颛桥—银都路）",district:"闵行区",station:"颛桥 / 银都路",lines:"5号线",status:"C",evidence:"证据不足",product:"老公房与商品房两房",price:"待补证",size:"60–80㎡",commute:"待实测",riverside:false,coords:[31.064,121.401],facts:["成熟居住区","存在预算边界样本"],verify:["成交活跃度","噪声与老人楼层"],nearby:["颛桥万达","银都路商业"]},
+  { id:"jiuting",name:"九亭（九亭站）",district:"松江区",station:"九亭",lines:"9号线",status:"C",evidence:"证据不足",product:"多层与电梯两房",price:"待补证",size:"65–85㎡",commute:"9号线直达",riverside:false,coords:[31.138,121.319],facts:["9号线直达漕河泾","挂牌样本较多"],verify:["高峰拥挤","小区步行距离"],nearby:["九亭金地广场","九里亭公园"]},
+  { id:"sijing",name:"泗泾（泗泾站）",district:"松江区",station:"泗泾",lines:"9号线",status:"C",evidence:"证据不足",product:"次新电梯两房",price:"待补证",size:"70–90㎡",commute:"9号线直达",riverside:false,coords:[31.119,121.261],facts:["面积余量较大","9号线通勤"],verify:["站点拥挤","真实成交与流动性"],nearby:["泗泾公园","三湘商业广场"]},
+  { id:"chuansha",name:"川沙生活圈",district:"浦东新区",station:"川沙",lines:"2号线",status:"C",evidence:"证据不足",product:"2010年代两房",price:"约215万样本",size:"约83㎡",commute:"待实测",riverside:false,coords:[31.191,121.699],facts:["出现83㎡两房挂牌","生活配套成熟"],verify:["挂牌真实性","到漕河泾通勤"],nearby:["川沙公园","百联川沙"]},
+  { id:"south-station",name:"上海南站—华东理工",district:"徐汇区",station:"上海南站 / 华东理工",lines:"1/3/15号线",status:"C",evidence:"证据不足",product:"1990年代小两房",price:"约235–242万样本",size:"60–65㎡",commute:"相对便利",riverside:false,coords:[31.154,121.431],facts:["中心区边界存在样本","靠近工作地点"],verify:["是否稳定供给","楼层与噪声"],nearby:["上海南站","华理体育场"]},
+  { id:"songbao",name:"淞宝（友谊路—宝杨路）",district:"宝山区",station:"友谊路 / 宝杨路",lines:"3号线",status:"C",evidence:"证据不足",product:"1990年代多层两房",price:"约200–230万样本",size:"61–73㎡",commute:"待实测",riverside:true,coords:[31.401,121.483],facts:["多套预算内挂牌","靠近北上海滨江"],verify:["3号线通勤","小区环境与成交"],nearby:["吴淞口","宝山滨江公园"]},
+  { id:"tonghe",name:"通河新村生活圈",district:"宝山区",station:"通河新村",lines:"1号线",status:"C",evidence:"证据不足",product:"1990年代多层两房",price:"约150–250万样本",size:"63–77㎡",commute:"待实测",riverside:false,coords:[31.333,121.446],facts:["生活配套成熟","1号线通达"],verify:["异常低价","无电梯楼层"],nearby:["宝山万达","通河公园"]},
+  { id:"fengzhuang",name:"丰庄生活圈",district:"嘉定区",station:"丰庄 / 真新新村",lines:"13/14号线",status:"C",evidence:"证据不足",product:"1990–2000年代两房",price:"约219–248万样本",size:"60–67㎡",commute:"待实测",riverside:false,coords:[31.241,121.367],facts:["多个预算边界样本","成熟社区"],verify:["真实成交","三人居住空间"],nearby:["丰庄茶城","金沙公园"]},
+  { id:"jiangqiao",name:"江桥生活圈",district:"嘉定区",station:"封浜 / 嘉怡路",lines:"14号线",status:"C",evidence:"证据不足",product:"2000–2010年代两房",price:"约210–250万样本",size:"75–91㎡",commute:"待实测",riverside:false,coords:[31.251,121.327],facts:["面积明显优于中心区","电梯房样本"],verify:["通勤与接驳","房屋性质"],nearby:["江桥万达","嘉闵高架"]},
+  { id:"qingpu",name:"青浦新城（漕盈路）",district:"青浦区",station:"漕盈路",lines:"17号线",status:"C",evidence:"证据不足",product:"2000年代两房",price:"约147–181万样本",size:"74–80㎡",commute:"待实测",riverside:false,coords:[31.166,121.102],facts:["总价余量较大","成熟城区配套"],verify:["通勤时间","流动性"],nearby:["青浦万达茂","环城水系公园"]},
+  { id:"xujing",name:"徐泾北城生活圈",district:"青浦区",station:"徐盈路 / 蟠龙路",lines:"17号线",status:"C",evidence:"证据不足",product:"2010年代电梯两房",price:"约155万样本",size:"70–73㎡",commute:"待实测",riverside:false,coords:[31.196,121.259],facts:["次新电梯住宅","预算余量较大"],verify:["真实步行距离","人口密度与接驳"],nearby:["蟠龙天地","徐泾北城商业"]},
+  { id:"nanqiao",name:"南桥新城生活圈",district:"奉贤区",station:"奉贤新城",lines:"5号线",status:"C",evidence:"证据不足",product:"2010年代电梯两房",price:"约228万样本",size:"约61㎡",commute:"待实测",riverside:false,coords:[30.918,121.475],facts:["有表面符合样本","城市配套较完整"],verify:["空间是否拥挤","长距离通勤"],nearby:["奉贤博物馆","泡泡公园"]},
+  { id:"jinshan",name:"金山石化生活圈",district:"金山区",station:"无上海地铁",lines:"无",status:"D",evidence:"硬条件冲突",product:"1980–2000年代两房",price:"约60–70万样本",size:"61–78㎡",commute:"不满足地铁条件",riverside:true,coords:[30.731,121.337],facts:["价格和面积余量极大","滨海而非黄浦江沿线"],verify:["非地铁通勤可能性","房屋质量"],nearby:["金山城市沙滩","金山卫站"]},
+  { id:"zhenru",name:"真如生活圈",district:"普陀区",station:"真如 / 上海西站",lines:"11/14/15号线",status:"C",evidence:"证据不足",product:"1980–1990年代两房",price:"约250万边界",size:"61–69㎡",commute:"待实测",riverside:false,coords:[31.255,121.401],facts:["预算边界样本","轨道交通较强"],verify:["稳定供给","低楼层潮湿噪声"],nearby:["真如环宇城MAX","真如公园"]},
+  { id:"ganquan",name:"甘泉—宜川生活圈",district:"普陀区",station:"新村路 / 延长路",lines:"7号线",status:"C",evidence:"边界待证",product:"1980–1990年代小两房",price:"约249–270万边界",size:"59–61㎡",commute:"待实测",riverside:false,coords:[31.273,121.438],facts:["中心区边界样本","生活配套成熟"],verify:["面积预算同时满足","三人空间"],nearby:["宜川公园","甘泉市场"]},
+  { id:"beixinjing",name:"北新泾生活圈",district:"长宁区",station:"北新泾 / 淞虹路",lines:"2号线",status:"C",evidence:"证据不足",product:"1990年代多层两房",price:"约214–250万样本",size:"61–68㎡",commute:"待实测",riverside:false,coords:[31.218,121.367],facts:["多套表面符合挂牌","2号线交通"],verify:["异常低价","高楼层养老适配"],nearby:["临空SOHO","新泾公园"]},
+  { id:"xianxia",name:"仙霞生活圈",district:"长宁区",station:"水城路 / 伊犁路",lines:"10号线",status:"C",evidence:"证据不足",product:"1990年代多层两房",price:"约245–249万样本",size:"60–67㎡",commute:"相对便利",riverside:false,coords:[31.207,121.391],facts:["中心区预算内挂牌","生活成熟"],verify:["异常低价与产权","道路/航空噪声"],nearby:["虹桥公园","黄金城道步行街"]},
+  { id:"hongkou",name:"虹口江湾—凉城",district:"虹口区",station:"江湾镇 / 殷高西路",lines:"3号线",status:"D",evidence:"当前未证实",product:"老公房与次新两房",price:"目前样本超250万",size:"55–75㎡",commute:"待实测",riverside:false,coords:[31.311,121.479],facts:["本轮未找到同时满足样本","不代表Joshua淘汰"],verify:["扩大平台与成交检索","普通住宅性质"],nearby:["彩虹湾公园","江湾镇商业"]},
+  { id:"dahua",name:"大华生活圈",district:"宝山区",station:"大华三路 / 行知路",lines:"7号线",status:"C",evidence:"证据不足",product:"1990–2000年代两房",price:"约210–239万样本",size:"71–74㎡",commute:"待实测",riverside:false,coords:[31.278,121.424],facts:["70㎡以上预算内样本","成熟社区"],verify:["真实成交","无电梯楼层"],nearby:["大华虎城","大华公园"]},
+  { id:"gucun",name:"顾村—刘行生活圈",district:"宝山区",station:"顾村公园 / 刘行",lines:"7/15号线",status:"C",evidence:"证据不足",product:"2000–2010年代两房",price:"约208–236万样本",size:"70–78㎡",commute:"待实测",riverside:false,coords:[31.348,121.375],facts:["面积与电梯条件较好","多套挂牌样本"],verify:["成交活跃度","通勤代价"],nearby:["顾村公园","龙湖天街"]},
+  { id:"shanghai-u",name:"上海大学—祁连",district:"宝山区",station:"上海大学 / 祁华路",lines:"7/15号线",status:"C",evidence:"证据不足",product:"1990–2010年代两房",price:"约219–250万样本",size:"67–80㎡",commute:"待实测",riverside:false,coords:[31.320,121.389],facts:["普通两房与特殊复式混合","预算内样本"],verify:["排除赠送面积产品","产权与贷款"],nearby:["上海大学","上大聚丰园"]},
+  { id:"caolu",name:"曹路生活圈",district:"浦东新区",station:"民雷路 / 曹路",lines:"9号线",status:"C",evidence:"证据不足",product:"1990–2010年代两房",price:"约160–233万样本",size:"64–78㎡",commute:"9号线长距离",riverside:false,coords:[31.269,121.681],facts:["总价面积余量明显","两代住宅混合"],verify:["房屋性质","站距与通勤"],nearby:["金海文化艺术中心","曹路宝龙"]},
+  { id:"jinyang",name:"金杨—金桥生活圈",district:"浦东新区",station:"金桥路 / 博兴路",lines:"6/9号线",status:"C",evidence:"证据不足",product:"1990年代老公房",price:"约220–250万样本",size:"72–75㎡",commute:"待实测",riverside:true,coords:[31.257,121.588],facts:["预算内空间样本","成熟生活配套"],verify:["实际滨江可达性","楼层与噪声"],nearby:["金桥公园","碧云体育公园"]},
+  { id:"zhaoxiang",name:"赵巷生活圈",district:"青浦区",station:"赵巷 / 汇金路附近",lines:"17号线",status:"C",evidence:"证据不足",product:"2010年代电梯两房",price:"约110–155万样本",size:"69–76㎡",commute:"待实测",riverside:false,coords:[31.159,121.193],facts:["价格余量很大","电梯住宅"],verify:["小区到地铁真实距离","通勤与流动性"],nearby:["奥特莱斯","赵巷公园"]},
+];
+
+const upcoming = ["洋泾","塘桥","南码头","世博 / 后滩","周家渡","上钢新村","杨思","三林","前滩外围"];
+const districts = ["全部区域", ...Array.from(new Set(circles.map((item) => item.district)))];
+
+function statusText(status: Circle["status"]) {
+  return status === "C" ? "C · 证据不足" : "D · 当前未证实";
+}
+
+export function DecisionMap() {
+  const mapElement = useRef<HTMLDivElement | null>(null);
+  const mapInstance = useRef<LeafletMap | null>(null);
+  const markerInstances = useRef<LeafletMarker[]>([]);
+  const [selectedId, setSelectedId] = useState("south-station");
+  const [district, setDistrict] = useState("全部区域");
+  const [query, setQuery] = useState("");
+  const [riversideOnly, setRiversideOnly] = useState(false);
+  const [showList, setShowList] = useState(true);
+
+  const filtered = useMemo(() => circles.filter((item) => {
+    const matchDistrict = district === "全部区域" || item.district === district;
+    const matchQuery = `${item.name}${item.district}${item.station}`.toLowerCase().includes(query.toLowerCase());
+    return matchDistrict && matchQuery && (!riversideOnly || item.riverside);
+  }), [district, query, riversideOnly]);
+
+  const selected = circles.find((item) => item.id === selectedId) ?? filtered[0] ?? circles[0];
+
+  useEffect(() => {
+    let mounted = true;
+    async function init() {
+      if (!mapElement.current || mapInstance.current) return;
+      const L = await import("leaflet");
+      if (!mounted || !mapElement.current) return;
+      const map = L.map(mapElement.current, { zoomControl: false, attributionControl: true }).setView([31.19, 121.47], 9);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 19,
+      }).addTo(map);
+      L.control.zoom({ position: "bottomright" }).addTo(map);
+      mapInstance.current = map;
+    }
+    init();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    async function refreshMarkers() {
+      const map = mapInstance.current;
+      if (!map) return;
+      const L = await import("leaflet");
+      markerInstances.current.forEach((marker) => marker.remove());
+      markerInstances.current = filtered.map((item) => {
+        const active = item.id === selected.id;
+        const icon = L.divIcon({
+          className: "circle-marker-wrap",
+          html: `<button class="circle-marker ${item.status === "D" ? "is-d" : ""} ${item.riverside ? "is-river" : ""} ${active ? "is-active" : ""}" aria-label="${item.name}"><span>${item.status}</span></button>`,
+          iconSize: [active ? 34 : 28, active ? 34 : 28],
+          iconAnchor: [active ? 17 : 14, active ? 17 : 14],
+        });
+        const marker = L.marker(item.coords, { icon }).addTo(map);
+        marker.bindTooltip(item.name, { direction: "top", offset: [0, -16], className: "map-tooltip" });
+        marker.on("click", () => setSelectedId(item.id));
+        return marker;
+      });
+    }
+    refreshMarkers();
+  }, [filtered, selected.id]);
+
+  useEffect(() => {
+    if (mapInstance.current && selected) {
+      mapInstance.current.flyTo(selected.coords, Math.max(mapInstance.current.getZoom(), 11), { duration: 0.55 });
+    }
+  }, [selected]);
+
+  return (
+    <main className="app-shell">
+      <header className="topbar">
+        <div className="brand">
+          <div className="brand-mark">购</div>
+          <div>
+            <p className="eyebrow">JOSHUA · HOME RESEARCH OS</p>
+            <h1>上海购房研究地图</h1>
+          </div>
+        </div>
+        <div className="header-note">
+          <span className="live-dot" />
+          数据截至 2026.07.23
+        </div>
+      </header>
+
+      <section className="metrics" aria-label="研究概览">
+        <div><strong>{circles.length}</strong><span>候选生活圈</span></div>
+        <div><strong>{circles.filter((x) => x.status === "C").length}</strong><span>等待补证</span></div>
+        <div><strong>{circles.filter((x) => x.riverside).length}</strong><span>沿江 / 近水样本</span></div>
+        <div className="metric-wide"><strong>0</strong><span>Joshua 已作判断</span><em>地图不替你决定</em></div>
+      </section>
+
+      <section className="workspace">
+        <aside className={`research-panel ${showList ? "" : "is-collapsed"}`}>
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">MARKET SCAN</p>
+              <h2>生活圈长名单</h2>
+            </div>
+            <button className="collapse-button" onClick={() => setShowList(!showList)} aria-label={showList ? "收起列表" : "展开列表"}>
+              {showList ? "‹" : "›"}
+            </button>
+          </div>
+          {showList && <>
+            <label className="search-box">
+              <span>⌕</span>
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索板块、地铁或行政区" />
+            </label>
+            <div className="filter-row">
+              <select value={district} onChange={(event) => setDistrict(event.target.value)} aria-label="行政区筛选">
+                {districts.map((item) => <option key={item}>{item}</option>)}
+              </select>
+              <button className={riversideOnly ? "filter-button active" : "filter-button"} onClick={() => setRiversideOnly(!riversideOnly)}>
+                ≋ 黄浦江沿线
+              </button>
+            </div>
+            <div className="result-count">显示 {filtered.length} / {circles.length} 个生活圈</div>
+            <div className="circle-list">
+              {filtered.map((item) => (
+                <button key={item.id} className={`circle-row ${item.id === selected.id ? "selected" : ""}`} onClick={() => setSelectedId(item.id)}>
+                  <span className={`status-disc status-${item.status.toLowerCase()}`}>{item.status}</span>
+                  <span className="row-copy">
+                    <strong>{item.name}</strong>
+                    <small>{item.district} · {item.station}</small>
+                  </span>
+                  {item.riverside && <span className="river-glyph">≈</span>}
+                </button>
+              ))}
+              {filtered.length === 0 && <div className="empty-state">没有符合当前筛选的生活圈</div>}
+            </div>
+          </>}
+        </aside>
+
+        <div className="map-stage">
+          <div ref={mapElement} className="map-canvas" aria-label="上海候选生活圈地图" />
+          <div className="map-legend">
+            <span><i className="legend-c" /> C 证据不足</span>
+            <span><i className="legend-d" /> D 当前未证实</span>
+            <span><i className="legend-river" /> 沿江 / 近水</span>
+          </div>
+          <div className="map-label">上海 · 全市场广度扫描</div>
+        </div>
+
+        <aside className="detail-panel">
+          <div className="detail-topline">
+            <span className={`status-pill status-${selected.status.toLowerCase()}`}>{statusText(selected.status)}</span>
+            {selected.riverside && <span className="river-pill">≈ 沿江关注</span>}
+          </div>
+          <p className="eyebrow">{selected.district} · {selected.lines}</p>
+          <h2>{selected.name}</h2>
+          <p className="station-line">⌖ {selected.station}</p>
+
+          <div className="fact-grid">
+            <div><span>主流产品</span><strong>{selected.product}</strong></div>
+            <div><span>面积样本</span><strong>{selected.size}</strong></div>
+            <div><span>总价样本</span><strong>{selected.price}</strong></div>
+            <div><span>通勤</span><strong>{selected.commute}</strong></div>
+          </div>
+
+          <section className="detail-section">
+            <div className="section-title"><span>01</span><h3>当前事实</h3></div>
+            <ul className="fact-list">
+              {selected.facts.map((fact) => <li key={fact}>{fact}</li>)}
+            </ul>
+          </section>
+
+          <section className="detail-section">
+            <div className="section-title"><span>02</span><h3>待补证</h3></div>
+            <div className="tag-cloud">
+              {selected.verify.map((item) => <span key={item}>{item}</span>)}
+            </div>
+          </section>
+
+          <section className="detail-section">
+            <div className="section-title"><span>03</span><h3>附近关注</h3></div>
+            <div className="nearby-list">
+              {selected.nearby.map((item) => <span key={item}>＋ {item}</span>)}
+            </div>
+          </section>
+
+          <div className="judgement-box">
+            <span>JOSHUA 阶段判断</span>
+            <strong>尚未判断</strong>
+            <p>Horus 提供事实与反向验证，不替你淘汰。</p>
+          </div>
+        </aside>
+      </section>
+
+      <section className="next-study">
+        <div>
+          <p className="eyebrow">NEXT RESEARCH THEME</p>
+          <h2>浦东 · 黄浦江沿线生活圈专项</h2>
+          <p>下一轮将区分“真正步行可达滨江”与“营销意义上的滨江板块”。</p>
+        </div>
+        <div className="route-list">
+          {upcoming.map((item, index) => <span key={item}><b>{String(index + 1).padStart(2, "0")}</b>{item}</span>)}
+        </div>
+      </section>
+
+      <footer>
+        <span>COUNCIL OF WISDOM · INVESTOR-HORUS</span>
+        <p>挂牌存在 ≠ 可以成交 ≠ 价格合理　·　判断权始终属于 Joshua</p>
+      </footer>
+    </main>
+  );
+}
