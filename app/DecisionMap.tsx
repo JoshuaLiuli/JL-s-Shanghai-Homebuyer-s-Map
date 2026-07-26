@@ -16,6 +16,7 @@ type Circle = {
   size: string;
   commute: string;
   riverside: boolean;
+  familySupport?: string;
   coords: [number, number];
   facts: string[];
   verify: string[];
@@ -64,6 +65,11 @@ const circles: Circle[] = [
   { id:"sanlin",name:"凌兆—三林生活圈",district:"浦东新区",station:"凌兆新村 / 三林",lines:"8/11号线",status:"C",evidence:"预算内两房样本",product:"1990年代动迁房与老公房",price:"约175–212万挂牌样本",size:"约52–62㎡",commute:"换乘9号线待实测",riverside:true,coords:[31.142,121.497],facts:["凌兆二村与凌兆十五村出现预算内两房样本","总价余量优于北侧沿江板块"],verify:["60㎡以上稳定供给","老人适配楼层、小区环境与滨江实际可达性"],nearby:["凌兆新村社区商业","三林滨江"]},
   { id:"expo",name:"世博—后滩功能区",district:"浦东新区",station:"中华艺术宫 / 后滩",lines:"7/8/13号线",status:"D",evidence:"不是独立刚需住宅圈",product:"次新商品房与少量老住宅",price:"已见两房样本约282–288万",size:"约77–78㎡样本",commute:"换乘9号线待实测",riverside:true,coords:[31.185,121.476],facts:["滨江公共空间质量高","当前检索到的标准两房样本超过250万"],verify:["是否存在普通住宅预算内异常样本","把周边居住腹地与景观功能区分开"],nearby:["世博文化公园","后滩公园"]},
   { id:"qiantan-edge",name:"前滩外围（研究标签）",district:"浦东新区",station:"东方体育中心 / 灵岩南路",lines:"6/8/11号线",status:"D",evidence:"边界概念待拆分",product:"跨杨思、凌兆等不同住宅圈",price:"不可直接比较",size:"不可直接比较",commute:"待按具体小区实测",riverside:true,coords:[31.153,121.478],facts:["“前滩外围”是营销与区位标签，不是同质生活圈","预算内样本主要可能落在杨思、凌兆等既有社区"],verify:["具体小区归属与产权","避免为前滩标签支付溢价"],nearby:["前滩太古里","前滩休闲公园"]},
+  { id:"jiading-new-city",name:"嘉定新城—白银路生活圈",district:"嘉定区",station:"嘉定新城 / 白银路",lines:"11号线",status:"C",evidence:"预算边界样本",product:"2000–2010年代电梯两房",price:"约250万挂牌样本",size:"约89㎡",commute:"11号线换乘待实测",riverside:false,familySupport:"嘉定新城亲属支持圈核心，具体门到门距离待录入",coords:[31.345,121.254],facts:["出现约89㎡、250万两房挂牌样本","与嘉定新城亲属家庭的空间联系最直接"],verify:["具体小区到妹妹家的门到门时间","成交、产权与贷款条件"],nearby:["嘉定新城站","远香湖"]},
+  { id:"malu",name:"马陆—嘉定新城南生活圈",district:"嘉定区",station:"马陆 / 嘉定新城",lines:"11号线",status:"C",evidence:"两房供给可见",product:"2000年代后电梯两房",price:"250万以内供给待逐套核验",size:"约80–90㎡样本",commute:"11号线换乘待实测",riverside:false,familySupport:"邻近嘉定新城，适合作为亲属支持圈南侧样本",coords:[31.321,121.276],facts:["可见约84㎡商品住宅两房样本","面积与老人长期居住条件优于中心区紧凑房"],verify:["预算内稳定供给","到妹妹家及漕河泾双向时间"],nearby:["马陆站","大融城周边"]},
+  { id:"juyuan",name:"菊园新区—嘉定北生活圈",district:"嘉定区",station:"嘉定北 / 嘉定西",lines:"11号线",status:"C",evidence:"预算内大两房样本",product:"2000年代多层与电梯两房",price:"约235万挂牌样本",size:"约96㎡样本",commute:"11号线长距离",riverside:false,familySupport:"嘉定新城亲属支持圈北侧，距离需按具体小区测量",coords:[31.397,121.238],facts:["出现约96㎡、235万两房挂牌样本","空间余量适合三人阶段性长期居住"],verify:["挂牌真实性与房屋性质","老人楼层及到妹妹家的时间"],nearby:["嘉定北站","菊园新区社区商业"]},
+  { id:"jiading-old-town",name:"嘉定老城—新成路生活圈",district:"嘉定区",station:"嘉定北 / 新成路",lines:"11号线+公交",status:"D",evidence:"合格样本待证",product:"老公房与早期商品房",price:"250万以内待补证",size:"60–90㎡待补证",commute:"接驳与换乘待实测",riverside:false,familySupport:"邻近嘉定新城，但地铁接驳和具体距离差异较大",coords:[31.385,121.276],facts:["成熟老城生活配套","地理上处于嘉定新城亲属支持圈"],verify:["预算内两房供给","站距、楼层、小区环境与流动性"],nearby:["州桥老街","嘉定博物馆"]},
+  { id:"nanxiang",name:"南翔—古猗园生活圈",district:"嘉定区",station:"南翔",lines:"11号线",status:"C",evidence:"预算边界样本",product:"1990年代多层大两房",price:"约250万挂牌样本",size:"约89–91㎡",commute:"11号线换乘待实测",riverside:false,familySupport:"在嘉定新城亲属支持圈南侧，需比较驾车与轨交通达性",coords:[31.294,121.311],facts:["出现约89–91㎡、250万两房挂牌样本","生活配套成熟且空间明显充足"],verify:["无电梯楼层与老人适配","到妹妹家和漕河泾的双向时间"],nearby:["古猗园","南翔老街"]},
 ];
 
 const districts = ["全部区域", ...Array.from(new Set(circles.map((item) => item.district)))];
@@ -86,6 +92,8 @@ export function DecisionMap() {
   const [riversideOnly, setRiversideOnly] = useState(false);
   const [shortlistOnly, setShortlistOnly] = useState(false);
   const [shortlistIds, setShortlistIds] = useState<string[]>([]);
+  const [archivedIds, setArchivedIds] = useState<string[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
   const [pois, setPois] = useState<Poi[]>([]);
   const [poiStatus, setPoiStatus] = useState<"loading" | "ready" | "error">("loading");
   const [showList, setShowList] = useState(true);
@@ -93,14 +101,15 @@ export function DecisionMap() {
   const filtered = useMemo(() => circles.filter((item) => {
     const matchDistrict = district === "全部区域" || item.district === district;
     const matchQuery = `${item.name}${item.district}${item.station}`.toLowerCase().includes(query.toLowerCase());
-    return matchDistrict && matchQuery && (!riversideOnly || item.riverside) && (!shortlistOnly || shortlistIds.includes(item.id));
-  }), [district, query, riversideOnly, shortlistOnly, shortlistIds]);
+    const matchArchive = showArchived ? archivedIds.includes(item.id) : !archivedIds.includes(item.id);
+    return matchDistrict && matchQuery && matchArchive && (!riversideOnly || item.riverside) && (!shortlistOnly || shortlistIds.includes(item.id));
+  }), [district, query, riversideOnly, shortlistOnly, shortlistIds, archivedIds, showArchived]);
 
-  const selected = circles.find((item) => item.id === selectedId) ?? filtered[0] ?? circles[0];
+  const selected = circles.find((item) => item.id === selectedId && !archivedIds.includes(item.id)) ?? filtered[0] ?? circles.find((item) => !archivedIds.includes(item.id)) ?? circles[0];
   const comparedCircles = useMemo(() => {
-    const shortlisted = circles.filter((item) => shortlistIds.includes(item.id));
+    const shortlisted = circles.filter((item) => shortlistIds.includes(item.id) && !archivedIds.includes(item.id));
     return [selected, ...shortlisted.filter((item) => item.id !== selected.id)];
-  }, [selected, shortlistIds]);
+  }, [selected, shortlistIds, archivedIds]);
 
   const comparisonRows = [
     { label: "01 总价可达性", value: (item: Circle) => item.price },
@@ -108,7 +117,7 @@ export function DecisionMap() {
     { label: "03 供给证据", value: (item: Circle) => `${item.evidence} · ${item.facts[0]}` },
     { label: "04 通勤可达性", value: (item: Circle) => `${item.lines} · ${item.commute}` },
     { label: "05 生活便利度", value: (item: Circle) => item.nearby.join(" / ") },
-    { label: "06 父母长期居住", value: (item: Circle) => item.verify.some((text) => /楼层|电梯|老人|潮湿/.test(text)) ? item.verify.filter((text) => /楼层|电梯|老人|潮湿/.test(text)).join(" / ") : "老人适配待实地核验" },
+    { label: "06 父母长期居住", value: (item: Circle) => item.familySupport || (item.verify.some((text) => /楼层|电梯|老人|潮湿/.test(text)) ? item.verify.filter((text) => /楼层|电梯|老人|潮湿/.test(text)).join(" / ") : "老人适配待实地核验；到嘉定新城亲属家庭待测") },
     { label: "07 环境与噪声", value: (item: Circle) => item.verify.some((text) => /噪声|环境|步行|滨江/.test(text)) ? item.verify.filter((text) => /噪声|环境|步行|滨江/.test(text)).join(" / ") : "安静度与小区环境待核验" },
     { label: "08 滨江与休闲", value: (item: Circle) => item.riverside ? `沿江关注 · ${item.nearby.join(" / ")}` : `非沿江样本 · ${item.nearby.join(" / ")}` },
     { label: "09 流动性与风险", value: (item: Circle) => item.verify.join(" / ") },
@@ -119,12 +128,32 @@ export function DecisionMap() {
     if (saved) {
       try { setShortlistIds(JSON.parse(saved)); } catch { /* ignore invalid old data */ }
     }
+    const savedArchive = window.localStorage.getItem("joshua-home-archive");
+    if (savedArchive) {
+      try { setArchivedIds(JSON.parse(savedArchive)); } catch { /* ignore invalid old data */ }
+    }
   }, []);
 
   function toggleShortlist(id: string) {
     setShortlistIds((current) => {
       const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
       window.localStorage.setItem("joshua-home-shortlist", JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function toggleArchive(id: string) {
+    setArchivedIds((current) => {
+      const restoring = current.includes(id);
+      const next = restoring ? current.filter((item) => item !== id) : [...current, id];
+      window.localStorage.setItem("joshua-home-archive", JSON.stringify(next));
+      if (!restoring) {
+        setShortlistIds((shortlist) => {
+          const nextShortlist = shortlist.filter((item) => item !== id);
+          window.localStorage.setItem("joshua-home-shortlist", JSON.stringify(nextShortlist));
+          return nextShortlist;
+        });
+      }
       return next;
     });
   }
@@ -289,7 +318,7 @@ export function DecisionMap() {
       </header>
 
       <section className="metrics" aria-label="研究概览">
-        <div><strong>{circles.length}</strong><span>候选生活圈</span></div>
+        <div><strong>{circles.length - archivedIds.length}</strong><span>当前候选生活圈</span></div>
         <div><strong>{circles.filter((x) => x.status === "C").length}</strong><span>等待补证</span></div>
         <div><strong>{circles.filter((x) => x.riverside).length}</strong><span>沿江 / 近水样本</span></div>
         <div className="metric-wide"><strong>{shortlistIds.length}</strong><span>Shortlist</span><em>仅代表进入复核，不代表决定购买</em></div>
@@ -321,6 +350,12 @@ export function DecisionMap() {
               <button className={shortlistOnly ? "filter-button shortlist-filter active" : "filter-button shortlist-filter"} onClick={() => setShortlistOnly(!shortlistOnly)}>
                 ★ Shortlist {shortlistIds.length || ""}
               </button>
+              <button
+                className={showArchived ? "filter-button archive-filter active" : "filter-button archive-filter"}
+                onClick={() => { setShowArchived(!showArchived); setShortlistOnly(false); }}
+              >
+                {showArchived ? "↩ 返回候选清单" : `归档 ${archivedIds.length || ""}`}
+              </button>
             </div>
             <div className="result-count">显示 {filtered.length} / {circles.length} 个生活圈</div>
             <div className="circle-list">
@@ -341,6 +376,14 @@ export function DecisionMap() {
                     title={shortlistIds.includes(item.id) ? "从 Shortlist 移除" : "加入 Shortlist"}
                   >
                     {shortlistIds.includes(item.id) ? "★" : "☆"}
+                  </button>
+                  <button
+                    className={archivedIds.includes(item.id) ? "archive-toggle restore" : "archive-toggle"}
+                    onClick={() => toggleArchive(item.id)}
+                    aria-label={archivedIds.includes(item.id) ? `恢复${item.name}` : `归档${item.name}`}
+                    title={archivedIds.includes(item.id) ? "恢复到候选清单" : "归档并隐藏"}
+                  >
+                    {archivedIds.includes(item.id) ? "↩" : "×"}
                   </button>
                 </div>
               ))}
